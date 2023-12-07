@@ -10,7 +10,7 @@ df.replace('Rising Pune Supergiants', 'Rising Pune Supergiant', inplace=True)
 
 
 def All_teams_API():
-    teams = list(df['Team1'].unique())
+    teams = sorted(list(df['Team1'].unique()))
     return {'Teams': teams}
 
 
@@ -49,25 +49,21 @@ def team_record_API(team_name):
     record.reset_index(inplace=True)
     record.rename(columns={'index': 'Teams'}, inplace=True)
 
-    def most_against(team):
-        matches_played = df[(df['Team1'] == team) | (df['Team2'] == team)]
-        matches_played_against1 = matches_played[(matches_played['Team1'] != team)]
-        matches_played_against2 = matches_played[(matches_played['Team2'] != team)]
+    def most_against(team_nam):
+        matches_played = df[(df['Team1'] == team_nam) | (df['Team2'] == team_nam)]
+        matches_played_against1 = matches_played[(matches_played['Team1'] != team_nam)]
+        matches_played_against2 = matches_played[(matches_played['Team2'] != team_nam)]
         matches_played_against1 = matches_played_against1['Team1'].value_counts()
         matches_played_against2 = matches_played_against2['Team2'].value_counts()
         total_against = pd.DataFrame(pd.concat([matches_played_against1, matches_played_against2]))
         total_against.reset_index(inplace=True)
         total_against.rename(columns={'index': 'TeamName', 'count': 'Matches played against'}, inplace=True)
         most_played_against = total_against.groupby('TeamName')['Matches played against'].sum().sort_values(ascending=False).head(1)
+        return str(most_played_against.index.to_numpy()[0]) + " " + '(' + str(most_played_against[0]) + ')'
 
-        return most_played_against.index[0]  ##CHANGE HERE##
 
-    record['Teams'].apply(most_against)
-    most_aga_df = pd.DataFrame(record['Teams'].apply(most_against))
-    most_aga_df.rename(columns={'Teams': 'Most Played Against'}, inplace=True)
-    record = pd.concat([record, most_aga_df['Most Played Against']], axis=1)
-    record = pd.DataFrame(record)
-
+    record.insert(7, 'Most Against', record['Teams'].apply(most_against))
+    print(record)
     def total_wb_battingfirst(teamx):
         entire_wins = df[df['WinningTeam'] == teamx]
         return entire_wins[entire_wins['WonBy'] == 'Runs'].shape[0]
@@ -88,4 +84,4 @@ def team_record_API(team_name):
 
     record.set_index('Teams', inplace=True)
 
-    return {'Team Record': record.loc[str(team_name)].to_dict()} #IMPORTANT: ELSE TABLE IS NOT JSON serilizable#
+    return {'Team Record': record.loc[str(team_name)].to_dict()}  # IMPORTANT: ELSE TABLE IS NOT JSON serilizable#
