@@ -59,11 +59,11 @@ def team_record_API(team_name):
         total_against.reset_index(inplace=True)
         total_against.rename(columns={'index': 'TeamName', 'count': 'Matches played against'}, inplace=True)
         most_played_against = total_against.groupby('TeamName')['Matches played against'].sum().sort_values(ascending=False).head(1)
-        return str(most_played_against.index.to_numpy()[0]) + " " + '(' + str(most_played_against[0]) + ')'
-
+        print(team_nam)
+        return str(most_played_against.index.to_numpy()[0]) + " " + '(' + str(most_played_against.iloc[0]) + ')'
 
     record.insert(7, 'Most Against', record['Teams'].apply(most_against))
-    print(record)
+
     def total_wb_battingfirst(teamx):
         entire_wins = df[df['WinningTeam'] == teamx]
         return entire_wins[entire_wins['WonBy'] == 'Runs'].shape[0]
