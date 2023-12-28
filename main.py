@@ -22,6 +22,38 @@ def page_3():
     return jsonify(response)
 
 
+@website.route('/api/batsmen')
+def page_4():
+    batsmen = ipl.All_batsmen_API()
+    return jsonify(batsmen)
+
+
+@website.route('/api/batsman_record')
+def page_5():
+    batter1 = request.args.get('batter')
+    response = ipl.batsman_record(batter1)
+    return jsonify(response)
+
+
+@website.route('/api/POM_names')
+def page_6():
+    pomnames = ipl.POM_names()
+    return jsonify(pomnames)
+
+@website.route('/api/POM_record')
+def page_7():
+    pom_name = request.args.get('pom')
+    response = ipl.player_of_match_record(pom_name)
+    return jsonify(response)
+
+
+@website.route('/api/batsman_against_record')
+def page_8():
+    batter_name = request.args.get('batter')
+    response = ipl.batsman_against_record(batter_name)
+    return jsonify(response)
+
+
 if __name__ == '__main__':
 
     website.run(debug=True, port=5002)
