@@ -122,9 +122,10 @@ original_rep['Average'] = original_rep.apply(average, axis=1)
 original_rep = original_rep.merge(ndf.groupby(['Season', 'batter']).size().reset_index(), on=['Season', 'batter'])
 
 original_rep.rename(columns={0: 'All balls faced'}, inplace=True)
-original_rep = original_rep.merge(ndf[ndf['extra_type'] == 'wides'].groupby(['Season', 'batter']).size().reset_index(), on=['Season', 'batter'])
+original_rep = original_rep.merge(ndf[ndf['extra_type']=='wides'].groupby(['Season','batter']).size().reset_index(), how='left', on=['Season','batter'])
+original_rep.rename(columns={0: 'wides faced'}, inplace= True)
+original_rep['wides faced'].fillna(0, inplace=True)
 
-original_rep.rename(columns={0: 'wides faced'}, inplace=True)
 
 
 def balls_faced(row):
@@ -225,9 +226,9 @@ def against(row):
     return row['Team1']
 ndf['Against'] = ndf.apply(against, axis=1)
 
-aga_batrun_df = ndf.groupby(['Against','batter'])['batsman_run'].sum().reset_index()
+aga_batrun_df = ndf.groupby(['batter','Against'])['batsman_run'].sum().reset_index()
 aga_batout_df = ndf.groupby('Against')['player_out'].value_counts().reset_index(name= 'OUT').rename(columns={'player_out': 'batter'})
-original_aga = aga_batrun_df.merge(aga_batout_df, how='outer', on=['Against', 'batter'])
+original_aga = aga_batrun_df.merge(aga_batout_df, how='outer', on=['batter','Against'])
 original_aga['OUT'].fillna('Not OUT', inplace=True)
 original_aga['batsman_run'].fillna(0, inplace=True)
 def average(row):
@@ -238,24 +239,27 @@ def average(row):
   else:
     return round(int(row['batsman_run'])/int(row['OUT']),2)
 original_aga['Average'] = original_aga.apply(average, axis=1)
-original_aga = original_aga.merge(ndf.groupby(['Against', 'batter']).size().reset_index(), on=['Against', 'batter'])
+original_aga = original_aga.merge(ndf.groupby(['batter','Against']).size().reset_index(), on=['batter','Against'])
 
 original_aga.rename(columns={0: 'All balls faced'}, inplace=True)
-original_aga = original_aga.merge(ndf[ndf['extra_type']== 'wides'].groupby(['Against','batter']).size().reset_index(), on=['Against', 'batter'])
-
+original_aga = original_aga.merge(ndf[ndf['extra_type']== 'wides'].groupby(['batter', 'Against']).size().reset_index(), how='left',on=['batter', 'Against'])
 original_aga.rename(columns={0: 'wides faced'}, inplace= True)
+original_aga['wides faced'].fillna(0, inplace=True)
+
 
 def balls_faced(row):
   return int(row['All balls faced'] - row['wides faced'])
+
+
 original_aga['Actual balls faced'] = original_aga.apply(balls_faced, axis=1)
 def strike_rate(row):
   return round((row['batsman_run']/row['Actual balls faced'])*100, 2)
 original_aga['Strike Rate'] = original_aga.apply(strike_rate, axis=1)
-bats_high_aga = ndf.groupby(['Against','ID','batter'])['batsman_run'].sum().reset_index().drop(columns='ID').groupby(['Against','batter'])['batsman_run'].max().reset_index().rename(columns={'batsman_run':'Highest Match Score'})
+bats_high_aga = ndf.groupby(['batter', 'Against', 'ID'])['batsman_run'].sum().reset_index().drop(columns='ID').groupby(['batter','Against'])['batsman_run'].max().reset_index().rename(columns={'batsman_run':'Highest Match Score'})
 
-original_aga = original_aga.merge(bats_high_aga, on = ['Against', 'batter'])
+original_aga = original_aga.merge(bats_high_aga, on = ['batter','Against'])
 
-original_aga=original_aga.merge(ndf.groupby(['Against','batter'])['ID'].nunique().reset_index().rename(columns={'ID':'Innings'}), on=['Against', 'batter'])
+original_aga=original_aga.merge(ndf.groupby(['batter','Against'])['ID'].nunique().reset_index().rename(columns={'ID':'Innings'}), on=['batter','Against'])
 
 final_aga_table= original_aga[['Against', 'batter', 'batsman_run', 'Average', 'Strike Rate', 'Highest Match Score','Innings']]
 
