@@ -271,3 +271,64 @@ def batsman_against_record(batter):
     table = final_aga_table[final_aga_table['batter'] == str(batter)].copy()
     table.drop('batter', axis=1, inplace=True)
     return {'Batsman Against Record': table.to_dict(orient='index')}
+
+# All bowlers name
+def bowlers_name_list():
+    bowler = sorted(list(ndf['bowler'].unique()))
+    return {'Bowlers': bowler}
+
+# Bowling record
+
+ndf['Wicket by Bowler'] = (ndf['batter'] == ndf['player_out'])&(~ndf['kind'].isin(['retired hurt','retired out','run out','obstructing the field']))
+ndf['runs conceded'] = ~(ndf['extra_type'].isin(['penalty','byes','legbyes']))
+
+def run_con_bowl(row):
+    if row['runs conceded']:
+        return row['total_run']
+    else:
+        return row['batsman_run']
+
+ndf['runs by bowler'] = ndf.apply(run_con_bowl, axis=1)
+
+ndf = ndf.merge(ndf.groupby(['ID','innings','overs','bowler'])['overs'].size().reset_index(name='balls_in_over'), on = ['ID','innings','overs','bowler'])
+ndf['Ball count'] = ~ndf['extra_type'].isin(['wides','noballs'])
+####
+
+Ndf = ndf.groupby(['Season','bowler'])['Wicket by Bowler'].sum().reset_index()
+Ndf = Ndf.merge(ndf.groupby(['Season','bowler'])['runs by bowler'].sum(), on=['Season','bowler'])
+Ndf = Ndf.merge(ndf.groupby(['Season','bowler'])['Ball count'].sum().reset_index(), on=['Season','bowler'])
+
+def overs(row):
+    return round(row['Ball count']/6,1)
+Ndf['Overs'] = Ndf.apply(overs, axis=1)
+
+def eco_rate(row):
+    return round(row['runs by bowler']/row['Overs'],2)
+Ndf['Economy'] = Ndf.apply(eco_rate, axis=1)
+
+def average(row):
+    if row['Wicket by Bowler'] == 0:
+        return row['runs by bowler']
+    else:
+        return round(row['runs by bowler']/row['Wicket by Bowler'], 2)
+Ndf['Average'] = Ndf.apply(average, axis=1)
+
+def str_rate(row):
+    if row['Wicket by Bowler'] == 0:
+        return row['Ball count']
+    else:
+        return round(row['Ball count']/row['Wicket by Bowler'], 2)
+Ndf['Strike Rate'] = Ndf.apply(str_rate, axis=1)
+
+nDF6 = ndf[ndf['balls_in_over']==6]
+nnDF = nDF6.groupby(['Season','ID','innings','overs','bowler'])['runs by bowler'].sum().reset_index()
+nnDF = nnDF[nnDF['runs by bowler']==0]
+fNdf = Ndf.merge(nnDF.groupby('Season')['bowler'].value_counts().reset_index(name='maiden overs'),how='left' ,on =['Season', 'bowler'])
+fNdf['maiden overs'].fillna(0, inplace=True)
+fNdf['maiden overs'] = fNdf['maiden overs'].astype(np.int16)
+
+
+def bowling_rec(bowler):
+    table = fNdf[fNdf['bowler'] == str(bowler)].copy()
+    table.drop('bowler', axis=1, inplace=True)
+    return {'Bowler Record by Season': table.to_dict(orient='index')}

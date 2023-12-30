@@ -53,6 +53,19 @@ def page_8():
     response = ipl.batsman_against_record(batter_name)
     return jsonify(response)
 
+@website.route('/api/bowlers')
+def page_9():
+    bowler_name = ipl.bowlers_name_list()
+    return jsonify(bowler_name)
+
+@website.route('/api/bowling_rec')
+def page_10():
+    bowler1 = request.args.get('bowler')
+    response = ipl.bowling_rec(bowler1)
+    return jsonify(response)
+
+
+
 
 if __name__ == '__main__':
 
