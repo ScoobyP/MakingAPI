@@ -282,6 +282,8 @@ def bowlers_name_list():
 ndf['Wicket by Bowler'] = (ndf['batter'] == ndf['player_out'])&(~ndf['kind'].isin(['retired hurt','retired out','run out','obstructing the field']))
 ndf['runs conceded'] = ~(ndf['extra_type'].isin(['penalty','byes','legbyes']))
 
+
+
 def run_con_bowl(row):
     if row['runs conceded']:
         return row['total_run']
@@ -332,3 +334,65 @@ def bowling_rec(bowler):
     table = fNdf[fNdf['bowler'] == str(bowler)].copy()
     table.drop('bowler', axis=1, inplace=True)
     return {'Bowler Record by Season': table.to_dict(orient='index')}
+
+ndfbo = ipld.merge(iplm, how='outer',on ='ID')
+ndfbo['Wicket by Bowler'] = (ndfbo['batter'] == ndfbo['player_out'])&(~ndfbo['kind'].isin(['retired hurt','retired out','run out','obstructing the field']))
+ndfbo['runs conceded'] = ~(ndfbo['extra_type'].isin(['penalty','byes','legbyes']))
+
+def against_b(row):
+  if row['bowler'] in row['Team1Players']:
+    return row['Team2']
+  else:
+    return row['Team1']
+ndfbo['Against'] = ndfbo.apply(against_b, axis=1)
+
+def run_con_bowl(row):
+  if row['runs conceded'] == True:
+    return row['total_run']
+  else:
+    return row['batsman_run']
+
+ndfbo['runs by bowler'] = ndfbo.apply(run_con_bowl, axis=1)
+
+ndfbo = ndfbo.merge(ndfbo.groupby(['ID','innings','overs','bowler'])['overs'].size().reset_index(name='balls_in_over'), on = ['ID','innings','overs','bowler'])
+ndfbo['Ball count'] = ~ndfbo['extra_type'].isin(['wides','noballs'])
+####
+
+Ndf = ndfbo.groupby(['Against','bowler'])['Wicket by Bowler'].sum().reset_index()
+Ndf = Ndf.merge(ndfbo.groupby(['Against','bowler'])['runs by bowler'].sum(), on=['Against','bowler'])
+Ndf = Ndf.merge(ndfbo.groupby(['Against','bowler'])['Ball count'].sum().reset_index(), on=['Against','bowler'])
+
+def overs(row):
+  return round(row['Ball count']/6,1)
+Ndf['Overs'] = Ndf.apply(overs, axis=1)
+
+def eco_rate(row):
+  return round(row['runs by bowler']/row['Overs'],2)
+Ndf['Economy'] = Ndf.apply(eco_rate, axis=1)
+
+def average(row):
+  if row['Wicket by Bowler'] == 0:
+    return row['runs by bowler']
+  else:
+    return round(row['runs by bowler']/row['Wicket by Bowler'], 2)
+Ndf['Average'] = Ndf.apply(average, axis=1)
+
+def str_rate(row):
+  if row['Wicket by Bowler'] == 0:
+    return row['Ball count']
+  else:
+    return round(row['Ball count']/row['Wicket by Bowler'], 2)
+Ndf['Strike Rate'] = Ndf.apply(str_rate, axis=1)
+
+nDF6bo = ndfbo[ndfbo['balls_in_over']==6]
+nnDFbo = nDF6bo.groupby(['Against','ID','innings','overs','bowler'])['runs by bowler'].sum().reset_index()
+nnDFbo = nnDFbo[nnDFbo['runs by bowler']==0]
+fNdfbol = Ndf.merge(nnDFbo.groupby('Against')['bowler'].value_counts().reset_index(name='maiden overs'),how='left' ,on =['Against', 'bowler'])
+fNdfbol['maiden overs'].fillna(0, inplace=True)
+fNdfbol['maiden overs'] = fNdfbol['maiden overs'].astype(np.int16)
+
+
+def aga_bowling_rec(bowler):
+    table = fNdfbol[fNdfbol['bowler'] == str(bowler)].copy()
+    table.drop('bowler', axis=1, inplace=True)
+    return {'Bowler Record Against Team': table.to_dict(orient='index')}

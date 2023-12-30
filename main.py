@@ -64,6 +64,12 @@ def page_10():
     response = ipl.bowling_rec(bowler1)
     return jsonify(response)
 
+@website.route('/api/aga_bowling_rec')
+def page_11():
+    bowler1 = request.args.get('bowl')
+    response = ipl.aga_bowling_rec(bowler1)
+    return jsonify(response)
+
 
 
 
